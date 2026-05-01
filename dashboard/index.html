@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SON Tracker Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .card { background: white; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .btn-period { transition: all 0.2s; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="layout-dashboard" class="text-indigo-600"></i>
+                    사용량 모니터링
+                </h1>
+                <p class="text-slate-500 mt-1">실시간 컴퓨터 사용 데이터 분석</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <select id="user-filter" onchange="handleUserFilterChange()" class="bg-white border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 shadow-sm outline-none">
+                    <option value="total">전체 컴퓨터 사용</option>
+                    <!-- Users will be injected here -->
+                </select>
+                <div id="connection-status" class="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 text-slate-500 text-sm font-medium border border-slate-200">
+                    <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                    연결 확인 중...
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-time Status -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="card p-6 border-t-4 border-indigo-500">
+                <div class="flex justify-between items-start mb-4">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">현재 상태</p>
+                    <i data-lucide="monitor" class="text-slate-400 w-4 h-4"></i>
+                </div>
+                <div id="current-status-val" class="text-xl font-bold text-slate-800">확인 중...</div>
+                <p id="current-user-val" class="text-xs text-slate-500 mt-1">로딩 중...</p>
+            </div>
+            
+            <div class="card p-6 border-t-4 border-emerald-500">
+                <div class="flex justify-between items-start mb-4">
+                    <p id="label-daily-total" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">오늘 총 사용</p>
+                    <i data-lucide="clock" class="text-slate-400 w-4 h-4"></i>
+                </div>
+                <div id="stats-daily-total" class="text-xl font-bold text-slate-800">00:00:00</div>
+                <p class="text-xs text-slate-500 mt-1">오늘 누적 시간</p>
+            </div>
+
+            <div class="card p-6 border-t-4 border-blue-500">
+                <div class="flex justify-between items-start mb-4">
+                    <p id="label-weekly-total" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">주간 총 사용</p>
+                    <i data-lucide="calendar-range" class="text-slate-400 w-4 h-4"></i>
+                </div>
+                <div id="stats-weekly-total" class="text-xl font-bold text-slate-800">00:00:00</div>
+                <p class="text-xs text-slate-500 mt-1">최근 7일 합계</p>
+            </div>
+
+            <div class="card p-6 border-t-4 border-purple-500">
+                <div class="flex justify-between items-start mb-4">
+                    <p id="label-monthly-total" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">월간 총 사용</p>
+                    <i data-lucide="calendar-days" class="text-slate-400 w-4 h-4"></i>
+                </div>
+                <div id="stats-monthly-total" class="text-xl font-bold text-slate-800">00:00:00</div>
+                <p class="text-xs text-slate-500 mt-1">최근 30일 합계</p>
+            </div>
+        </div>
+
+        <!-- Alert & Pie Chart Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+            <div class="card p-6 lg:col-span-1 border-t-4 border-amber-500">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="shield-alert" class="w-5 h-5 text-amber-500"></i>
+                        보안 경고
+                    </h3>
+                    <span id="alert-count" class="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded-full font-bold">0건</span>
+                </div>
+                <div id="alerts-container" class="space-y-4 max-h-[300px] overflow-y-auto pr-2">
+                    <p class="text-center text-slate-400 py-10 text-sm">최근 경고가 없습니다.</p>
+                </div>
+            </div>
+            
+            <div class="card p-6 lg:col-span-2">
+                <h3 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+                    <i data-lucide="pie-chart" class="w-5 h-5 text-emerald-500"></i>
+                    사용자별 누적 점유율 (최근 30일)
+                </h3>
+                <div class="h-[300px] flex justify-center">
+                    <canvas id="userShareChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeline / Logs -->
+        <div class="card p-6">
+            <h3 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+                <i data-lucide="list" class="w-5 h-5 text-amber-500"></i>
+                최근 기록 (Activity Log)
+            </h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead>
+                        <tr class="text-slate-400 border-b">
+                            <th class="pb-3 px-1 font-semibold">사용자</th>
+                            <th class="pb-3 px-1 font-semibold">유형</th>
+                            <th class="pb-3 px-1 font-semibold">시작 시간</th>
+                            <th class="pb-3 px-1 font-semibold">사용 시간</th>
+                            <th class="pb-3 px-1 font-semibold">상태</th>
+                        </tr>
+                    </thead>
+                    <tbody id="log-table-body" class="divide-y">
+                        <!-- Rows injected by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK & App Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="dashboard.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
